@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>みのじゃらん</title>
+    <base target="_top">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+    <script async src="https://platform.twitter.com/widgets.js" charset="utf-8" id="twitterWidgets"></script>
+    <style>
+    @media screen and (min-resolution: 2dppx) {html { font-size: 1.8rem;} input.btn {font-size: 0.5rem!important;}}
+    </style>
+  </head>
+  <body>
+    <section class="jumbotron text-center" style="margin-bottom:-1vh;padding-top:2vh;padding-bottom:1vh">
+      <div class="container">
+        <h1>みのじゃらん</h1>
+        <p class="lead text-muted">箕輪厚介さんの以下のツイートに送られたリプライを表示します。</p>
+        <blockquote class="twitter-tweet tw-align-center">
+          <p lang="ja" dir="ltr">コロナで死にそうな旅館やレストランやエンタメをやってるみなさん、僕が行ったり僕が行くようにリツイートしたりするのでリプ欄に！潰れないように凌ぎましょう。</p>
+          &mdash; 言わずと知れた天才編集者（箕輪厚介） (@minowanowa) 
+          <a href="https://twitter.com/minowanowa/status/1236261107708375042?ref_src=twsrc%5Etfw">March 7, 2020</a>
+        </blockquote>
+      </div>
+    </section>
+    <section class="jumbotron sticky-top" style="padding-top:1vh;padding-bottom:1vh;margin-top=-1vh">
+      <div class="row input-group-lg">
+        <div class="col-lg-2">
+          <select class="form-control" id="size" name="size">
+            <option value="10">10件</option>
+            <option value="20" selected>20件</option>
+            <option value="50">50件</option>
+          </select>
+        </div>
+        <div class="col-lg-8">
+          <form id="form";>
+	        <input type="search" class="form-control input-lg" placeholder="フリーワード検索" id="word">
+          </form>
+        </div>
+        <div class="col-lg-2">
+	      <span class="input-group-btn">
+            <input type="button" class="btn btn-primary" id="fetch" value="検索"/>
+	      </span>
+        </div>
+      </div>
+      <div class="row" style="padding-top:1vh">
+        <span class="input-group-btn col-sm-9">
+          <input type="button" class="btn btn-light btn-sm order" id="orderday" value="日付昇順"/>
+          <input type="button" class="btn btn-light btn-sm order" id="orderdayrev" value="日付降順"/>
+          <input type="button" class="btn btn-light btn-sm order" id="orderuser" value="ユーザー名昇順"/>
+          <input type="button" class="btn btn-light btn-sm order" id="orderuserrev" value="ユーザー名降順"/>
+	    </span>
+        <span class="input-group-btn col-sm-3">
+          <div class="float-right">
+            <input type="button" class="btn btn-secondary btn-sm" id="prev" value="前へ" disabled/>
+            <input type="button" class="btn btn-secondary btn-sm" id="next" value="次へ"/>
+          </div>
+	    </span>
+      </div>
+    </section>
+    <div class="container-fluid">
+      <div class="row" id="mainContent">
+        <?!= tweets ?>
+      </div>
+    </div>
+  </body>
+  <script>
+  var lastFetchedSize = "";
+  var lastFetchedWord = "";
+  var lastOrder = "";
+  var now=1;
+  function fetch(){
+    var size = document.querySelector("#size").value;
+    var word = document.querySelector("#word").value;
+    doFetch(size,word,1,"");
+    lastFetchedSize = document.querySelector("#size").value;
+    lastFetchedWord = document.querySelector("#word").value;
+    now=1;
+  }
+  function sort(e){
+    switchOrderButtonEnable(e.toElement)
+    
+    var order = e.toElement.id;
+    doFetch(lastFetchedSize,lastFetchedWord,now,order);
+    lastOrder = order;
+  }
+  function switchOrderButtonEnable(pushedButton){
+    Array.from(pushedButton.offsetParent.children).forEach(
+      function(orderButton){
+        orderButton.removeAttribute("disabled");
+        orderButton.classList.remove("btn-primary");
+        orderButton.classList.add("btn-light");
+      }
+    );
+    pushedButton.setAttribute("disabled","true");
+    pushedButton.classList.remove("btn-light");
+    pushedButton.classList.add("btn-primary");
+  }
+  function changePage(num){
+    now=now+num;
+    doFetch(lastFetchedSize,lastFetchedWord,now,lastOrder);
+  }
+  function doFetch(size,word,page,order){
+    document.querySelector("#mainContent").innerHTML = 
+    "<div class=\"text-center col-lg-12\">"
+     + "<div class=\"spinner-border\" role=\"status\">"
+     + "<span class=\"sr-only\">Loading...</span></div></div>"
+    google.script.run
+      .withFailureHandler(onFailure)
+      .withSuccessHandler(contentUpdate)
+      .fetch(size,word,page,order);
+  }
+  function contentUpdate(htmlString){
+    console.log("onSuccess");
+    document.querySelector("#mainContent").innerHTML = htmlString;
+    
+    switchPrevNext();
+    loadTwitterWidget();
+    
+  }
+  
+  function loadTwitterWidget(){
+    var container = document.querySelectorAll("blockquote.twitter-tweet");
+    twttr.widgets.load(container).then(
+      function(){
+        const mediaQuery = window.matchMedia( "screen and (min-resolution: 2dppx)" );
+        if(mediaQuery.matches) {
+          document.querySelectorAll("#mainContent twitter-widget").forEach(
+            function(el){
+              el.shadowRoot.querySelector(".EmbeddedTweet").style.fontSize = "0.8rem";
+            }
+          )
+        }
+      }
+    )
+  }
+  
+  function switchPrevNext(){
+    if(document.querySelector("#first")){
+      document.querySelector("#prev").setAttribute("disabled","true")
+    } else {
+      document.querySelector("#prev").removeAttribute("disabled")
+    }
+    if(document.querySelector("#last")){
+      document.querySelector("#next").setAttribute("disabled","true")
+    } else {
+      document.querySelector("#next").removeAttribute("disabled")
+    }
+  }
+  
+  function onFailure(e){
+    alert("通信に失敗しました。");
+    console.error(e)
+    now=1;
+    size="";
+    word="";
+  }
+  
+  window.onload = function() {
+    fetch();
+    document.querySelector("#prev").addEventListener("click", function() {
+      changePage(-1);
+    });
+    document.querySelector("#next").addEventListener("click", function() {
+      changePage(1);
+    });
+    document.querySelector("#fetch").addEventListener("click", function() {
+      fetch();
+    });
+    document.querySelector("#form").addEventListener("submit", function(e){
+      fetch();
+      e.preventDefault();
+    });
+    document.querySelectorAll(".order").forEach(function (element) {
+      element.addEventListener("click", function(e) {
+        sort(e);
+      });
+    });
+  };
+  </script>
+</html>
+
+
